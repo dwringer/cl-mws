@@ -4,12 +4,19 @@
   (:use :common-lisp
 	:cl-base64
 	:cl-ppcre
+	:cxml
 	:drakma
+	:flexi-streams
 	:ironclad)
+  (:shadowing-import-from :flexi-streams
+			  :octets-to-string
+			  :string-to-octets)
   (:shadowing-import-from :ironclad
 			  :null)
   (:export :*mws-credentials*
-	   :mws-request))
+	   :mws-request
+	   :dom-from-xml-string
+	   :sexp-from-xml-string))
 
 
 (in-package :cl-mws)
@@ -198,3 +205,20 @@
 		  :method :POST
 		  :user-agent "CL-MWS/v0 (Language=CL)"
 		  :url-encoder #'safe-url-encode)))
+
+
+(defun parse-xml-string (xml-string builder)
+  "Parse an XML string into object defined by builder"
+  (let ((seq (mapcar #'char-code (coerce xml-string 'list))))
+    (with-input-from-sequence (stream seq)
+      (parse-stream stream (funcall builder)))))
+
+
+(defun dom-from-xml-string (xml-string)
+  "Parse an XML string into a DOM instance"
+  (parse-xml-string xml-string #'cxml-dom:make-dom-builder))
+
+
+(defun sexp-from-xml-string (xml-string)
+  "Parse an XML string into an S-expression"
+  (parse-xml-string xml-string #'cxml-xmls:make-xmls-builder))

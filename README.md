@@ -5,6 +5,8 @@ Dependencies:
 ```
 cl-base64
 cl-ppcre
+cxml
 drakma
+flexi-streams
 ironclad
 ```
