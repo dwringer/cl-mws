@@ -222,43 +222,32 @@
 	:utf-8)))))
 
 
-(defun mws-request (api store action
-		    &key
-		      (data nil)
-		      (debug nil)
-		      (as-body nil))
+(defun mws-request (api store action &key (data nil) (debug nil) (as-body nil))
   "Generate and submit a specified MWS HTTP request"
-  (let* ((path (aget api *api-paths*))
+  (let* ((credentials (aget store *mws-credentials*))
+	 (path (aget api *api-paths*))
 	 (version (aget api *api-versions*))
-	 (credentials (aget store *mws-credentials*))
          (act-data (append (list (cons "Version" version)
 				 (cons "Action" action))
 			   data))
+	 (path-components (list *mws-endpoint* path version))
 	 (signed (sign-mws-request "POST"
 				   *mws-endpoint*
 				   api
 				   credentials
 				   :data act-data
 				   :debug debug))
-	 (path-components (list *mws-endpoint*
-				path
-				version))
-	 (content (if as-body
-		      (concatenate 'string
-				   "&"
-				   signed)
-		      "")))
+	 (content (if as-body (concatenate 'string "&" signed) "")))
     (when (not as-body)
-	(setf path-components
-	      (append path-components
-		      (list "?" signed))))
+      (setf path-components (append path-components (list "?" signed))))
     (when (and debug as-body)
-      (format t (concatenate 'string
-			     "====================~%"
-			     "CONTENT:~%"
-			     "--------------------~%"
-			     "~A~%"
-			     "====================~%")
+      (format t
+	      (concatenate 'string
+			   "====================~%"
+			   "CONTENT:~%"
+			   "--------------------~%"
+			   "~A~%"
+			   "====================~%")
 	      content))
     (multiple-value-bind (body-or-stream
 			  status-code
@@ -268,19 +257,18 @@
 			  must-close
 			  reason-phrase)
 	   (http-request (apply #'concatenate 'string path-components)
-			 :content-type ;"text/xml"
-			 (if as-body
-			     "application/x-www-form-urlencoded"
-			     "text/xml")
-			 :content content
 			 :accept nil
+			 :content content
+			 :content-type (if as-body
+					   "application/x-www-form-urlencoded"
+					   "text/xml")
 			 :method :POST
-			 :user-agent "CL-MWS/v0 (Language=CL)"
-			 :url-encoder #'safe-url-encode)
+			 :url-encoder #'safe-url-encode
+			 :user-agent "CL-MWS/v0 (Language=CL)")
       (values
        (if as-body
-	   (concatenate 'string (mapcar #'code-char (coerce body-or-stream
-							    'list)))
+	   (concatenate 'string (mapcar #'code-char
+					(coerce body-or-stream 'list)))
 	   body-or-stream)
        status-code
        headers
@@ -288,7 +276,6 @@
        stream
        must-close
        reason-phrase))))
-  
 
 
 (defun parse-xml-string (xml-string builder)
