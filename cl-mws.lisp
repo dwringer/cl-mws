@@ -27,7 +27,12 @@
 	   :get-lowest-offer-listings-for-sku
 	   :get-lowest-offer-listings-for-asin
 	   :get-lowest-priced-offers-for-sku
-	   :get-lowest-priced-offers-for-asin))
+	   :get-lowest-priced-offers-for-asin
+	   :get-my-fees-estimate
+	   :get-my-price-for-sku
+	   :get-my-price-for-asin
+	   :get-product-categories-for-sku
+	   :get-product-categories-for-asin))
 
 
 (in-package :cl-mws)
@@ -195,10 +200,10 @@
 (defun sign-mws-request (method domain api credentials
 			   &key (data nil) (debug nil))
   "Sign a specified MWS HTTP request"
-  (let ((path (aget api *api-paths*))
+  (let ((path    (aget api *api-paths*))
 	(version (aget api *api-versions*))
-	(params (create-mws-param-string
-		 (required-mws-data credentials data))))
+	(params  (create-mws-param-string
+		  (required-mws-data credentials data))))
     (let ((string-to-sign
 	   (format nil
 		   (concatenate 'string
@@ -224,20 +229,22 @@
 
 (defun mws-request (api store action &key (data nil) (debug nil) (as-body nil))
   "Generate and submit a specified MWS HTTP request"
-  (let* ((credentials (aget store *mws-credentials*))
-	 (path (aget api *api-paths*))
-	 (version (aget api *api-versions*))
-         (act-data (append (list (cons "Version" version)
-				 (cons "Action" action))
-			   data))
+  (let* ((credentials     (aget store *mws-credentials*))
+	 (path            (aget api *api-paths*))
+	 (version         (aget api *api-versions*))
+         (act-data        (append (list (cons "Version" version)
+					(cons "Action" action))
+				  data))
 	 (path-components (list *mws-endpoint* path version))
-	 (signed (sign-mws-request "POST"
-				   *mws-endpoint*
-				   api
-				   credentials
-				   :data act-data
-				   :debug debug))
-	 (content (if as-body (concatenate 'string "&" signed) "")))
+	 (signed          (sign-mws-request "POST"
+					    *mws-endpoint*
+					    api
+					    credentials
+					    :data act-data
+					    :debug debug))
+	 (content         (if as-body
+			      (concatenate 'string "&" signed)
+			      "")))
     (when (not as-body)
       (setf path-components (append path-components (list "?" signed))))
     (when (and debug as-body)
@@ -296,10 +303,25 @@
 
 
 (defun increment-list-pairs (prefix name)
+  "Make function to transform list to parameter-value pairs by name"
   (let ((i 1))
     #'(lambda (x)
 	(prog1 (cons (format nil "~A.~A.~A" prefix name i) x)
 	  (setf i (+ i 1))))))
+
+
+(defun alists-as-key-lists (list-name item-name)
+  "Make function to transform alists to numbered parameter-value lists"
+  (let ((i 1))
+    #'(lambda (alist)
+	(prog1 (mapcar #'(lambda (cons-pair)
+			   (let ((k (car cons-pair))
+				 (v (cdr cons-pair)))
+			     (cons (format nil "~A.~A.~A.~A"
+					   list-name item-name i k) v)))
+		       alist)
+	  (setf i (+ i 1))))))
+
 
 
 ;;; PRODUCTS API: ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -412,3 +434,60 @@
 						       *item-conditions*))
 			   (cons "ASIN" asin))
 	       :as-body t))
+
+
+(defun get-my-fees-estimate (store fees-estimate-request-list)
+  "Make a GetMyFeesEstimate request to the Products API"
+  (mws-request :products store "GetMyFeesEstimate"
+	       :data (apply #'concatenate 'list
+			    (mapcar (alists-as-key-lists
+				     "FeesEstimateRequestList"
+				     "FeesEstimateRequest")
+				    fees-estimate-request-list))))
+
+
+(defun get-my-price-for-sku (store seller-sku-list
+			     &optional
+			       (item-condition :all)
+			       (marketplace (get-marketplace-id)))
+  "UNTESTED - Make a GetMyPriceForSKU request to the Products API"
+  (mws-request :products store "GetMyPriceForSku"
+	       :data (append
+		      (list (cons "MarketplaceId" marketplace)
+			    (cons "ItemCondition" (aget item-condition
+						       *item-conditions*)))
+		      (mapcar (increment-list-pairs "SellerSKUList"
+						    "SellerSKU")
+			      seller-sku-list))))
+
+
+(defun get-my-price-for-asin (store asin-list
+			     &optional
+			       (item-condition :any)
+			       (marketplace (get-marketplace-id)))
+  "Make a GetMyPriceForASIN request to the Products API"
+  (mws-request :products store "GetMyPriceForASIN"
+	       :data (append
+		      (list (cons "MarketplaceId" marketplace)
+			    (cons "ItemCondition" (aget item-condition
+							*item-conditions*)))
+		      (mapcar (increment-list-pairs "ASINList" "ASIN")
+			      asin-list))))
+
+
+(defun get-product-categories-for-sku (store seller-sku
+				       &optional
+					 (marketplace (get-marketplace-id)))
+  "UNTESTED - Make a GetProductCategoriesForSKU request to the Products API"
+  (mws-request :products store "GetProductCategoriesForSKU"
+	       :data (list (cons "MarketplaceId" marketplace)
+			   (cons "SellerSKU" seller-sku))))
+
+
+(defun get-product-categories-for-asin (store asin
+				       &optional
+					 (marketplace (get-marketplace-id)))
+  "Make a GetProductCategoriesForASIN request to the Products API"
+  (mws-request :products store "GetProductCategoriesForASIN"
+	       :data (list (cons "MarketplaceId" marketplace)
+			   (cons "ASIN" asin))))
