@@ -11,7 +11,7 @@
   (:shadowing-import-from :flexi-streams
 			  :octets-to-string
 			  :string-to-octets)
-  (:shadowing-import-from :ironclad
+  (:shadowing-import-from :cl
 			  :null)
   (:export :*mws-credentials*
 	   :*mws-endpoint*
@@ -119,7 +119,7 @@
   (multiple-value-bind (sec min hr day mon yr wkd dst tz)
       (decode-universal-time u-time)
     (declare (ignore sec min hr day mon yr wkd))
-    (+ (get-universal-time)
+    (+ u-time  ; (get-universal-time)
        (* (- tz (if dst 1 0)) (* 60 60)))))
 
 
@@ -397,9 +397,10 @@
 
 
 (defun get-lowest-offer-listings-for-asin (store asin-list
-					  &optional
-					    (item-condition :any)
-					    (marketplace (get-marketplace-id)))
+					   &optional
+					     (item-condition :any)
+					     (marketplace
+					      (get-marketplace-id)))
   "Make a GetLowestOfferListingsForASIN request to the Products API"
   (mws-request :products store "GetLowestOfferListingsForASIN"
 	       :data (append (mapcar (increment-list-pairs "ASINList" "ASIN")
@@ -424,9 +425,9 @@
 
 
 (defun get-lowest-priced-offers-for-asin (store asin
-					 &optional
-					   (item-condition :any)
-					   (marketplace (get-marketplace-id)))
+					  &optional
+					    (item-condition :any)
+					    (marketplace (get-marketplace-id)))
   "Make a GetLowestPricedOffersForASIN request to the Products API"
   (mws-request :products store "GetLowestPricedOffersForASIN"
 	       :data (list (cons "MarketplaceId" marketplace)
@@ -462,9 +463,9 @@
 
 
 (defun get-my-price-for-asin (store asin-list
-			     &optional
-			       (item-condition :any)
-			       (marketplace (get-marketplace-id)))
+			      &optional
+				(item-condition :any)
+				(marketplace (get-marketplace-id)))
   "Make a GetMyPriceForASIN request to the Products API"
   (mws-request :products store "GetMyPriceForASIN"
 	       :data (append
@@ -485,9 +486,82 @@
 
 
 (defun get-product-categories-for-asin (store asin
-				       &optional
-					 (marketplace (get-marketplace-id)))
+					&optional
+					  (marketplace (get-marketplace-id)))
   "Make a GetProductCategoriesForASIN request to the Products API"
   (mws-request :products store "GetProductCategoriesForASIN"
 	       :data (list (cons "MarketplaceId" marketplace)
 			   (cons "ASIN" asin))))
+
+
+(defun list-orders (store
+		    &key
+		      created-after
+		      created-before
+		      last-updated-after
+		      last-updated-before
+		      order-status-list
+		      (marketplace-id-list (list (get-marketplace-id)))
+		      fulfillment-channel-list
+		      payment-method-list
+		      buyer-email
+		      seller-order-id
+		      max-results-per-page
+		      tfm-shipment-status-list)
+  "Make a ListOrders request to the Orders API"
+  (let ((data nil))
+    (when (not (or (and (null last-updated-after)
+			(null created-after))
+		   (and last-updated-after created-after)))
+      (when tfm-shipment-status-list
+	(setf data (append (mapcar (increment-list-pairs
+				    "TFMShipmentStatusList"
+				    "TFMShipmentStatus")
+				   tfm-shipment-status-list)
+			   data)))
+      (when max-results-per-page
+	(setf data (cons (cons "MaxResultsPerPage" max-results-per-page)
+			 data)))
+      (when seller-order-id
+	(setf data (cons (cons "SellerOrderId" seller-order-id)
+			 data)))
+      (when buyer-email
+	(setf data (cons (cons "BuyerEmail" buyer-email)
+			 data)))
+      (when payment-method-list
+	(setf data (append (mapcar (increment-list-pairs "PaymentMethodList"
+							 "PaymentMethod")
+				   payment-method-list)
+			   data)))
+      (when fulfillment-channel-list
+	(setf data (append (mapcar (increment-list-pairs
+				    "FulfillmentChannelList"
+				    "FulfillmentChannel")
+				   fulfillment-channel-list)
+			   data)))
+      (setf data (append (mapcar (increment-list-pairs
+				  "MarketplaceId"
+				  "Id")
+				 marketplace-id-list)
+			 data))
+      (when order-status-list
+	(setf data (append (mapcar (increment-list-pairs
+				    "OrderStatusList"
+				    "OrderStatus")
+				   order-status-list)
+			   data)))
+      (when last-updated-before
+	(setf data (cons (cons "LastUpdatedBefore" last-updated-before)
+			 data)))
+      (when last-updated-after
+	(setf data (cons (cons "LastUpdatedAfter" last-updated-after)
+			 data)))
+      (when created-before
+	(setf data (cons (cons "CreatedBefore" created-before)
+			 data)))
+      (when created-after
+	(setf data (cons (cons "CreatedAfter" created-after)
+			 data)))
+      (mws-request :orders store "ListOrders"
+		   :data data :debug t))))
+  
