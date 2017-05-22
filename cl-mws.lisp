@@ -19,6 +19,7 @@
 	   :mws-request
 	   :dom-from-xml-string
 	   :sexp-from-xml-string
+	   ;; PRODUCTS API:
 	   :list-matching-products
 	   :get-matching-product
 	   :get-matching-product-for-id
@@ -32,7 +33,13 @@
 	   :get-my-price-for-sku
 	   :get-my-price-for-asin
 	   :get-product-categories-for-sku
-	   :get-product-categories-for-asin))
+	   :get-product-categories-for-asin
+	   ;; ORDERS API:
+	   :list-orders
+	   :list-orders-by-next-token
+	   :get-order
+	   :list-order-items
+	   :list-order-items-by-next-token))
 
 
 (in-package :cl-mws)
@@ -563,5 +570,28 @@
 	(setf data (cons (cons "CreatedAfter" created-after)
 			 data)))
       (mws-request :orders store "ListOrders"
-		   :data data :debug t))))
-  
+		   :data data))))
+
+
+(defun list-orders-by-next-token (store next-token)
+  "UNTESTED - Make a ListOrdersByNextToken request to the Orders API"
+  (mws-request :orders store "ListOrdersByNextToken"
+	       :data (list (cons "NextToken" next-token))))
+
+
+(defun get-order (store amazon-order-id)
+  "UNTESTED - Make a GetOrder request to the Orders API"
+  (mws-request :orders store "GetOrder"
+	       :data (list (cons "AmazonOrderId" amazon-order-id))))
+
+
+(defun list-order-items (store amazon-order-id)
+  "UNTESTED - Make a ListOrderItems request to the Orders API"
+  (mws-request :orders store "ListOrderItems"
+	       :data (list (cons "AmazonOrderId" amazon-order-id))))
+
+
+(defun list-order-items-by-next-token (store amazon-order-id)
+  "UNTESTED - Make a ListOrderItemsByNextToken request to the Orders API"
+  (mws-request :orders store "ListOrderItemsByNextToken"
+	       :data (list (cons "NextToken" next-token))))
