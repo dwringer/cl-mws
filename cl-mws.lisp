@@ -330,7 +330,6 @@
 	  (setf i (+ i 1))))))
 
 
-
 ;;; PRODUCTS API: ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun list-matching-products (store query
@@ -501,6 +500,8 @@
 			   (cons "ASIN" asin))))
 
 
+;;; ORDERS API: ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun list-orders (store
 		    &key
 		      created-after
@@ -516,61 +517,29 @@
 		      max-results-per-page
 		      tfm-shipment-status-list)
   "Make a ListOrders request to the Orders API"
-  (let ((data nil))
-    (when (not (or (and (null last-updated-after)
-			(null created-after))
-		   (and last-updated-after created-after)))
-      (when tfm-shipment-status-list
-	(setf data (append (mapcar (increment-list-pairs
-				    "TFMShipmentStatusList"
-				    "TFMShipmentStatus")
-				   tfm-shipment-status-list)
-			   data)))
-      (when max-results-per-page
-	(setf data (cons (cons "MaxResultsPerPage" max-results-per-page)
-			 data)))
-      (when seller-order-id
-	(setf data (cons (cons "SellerOrderId" seller-order-id)
-			 data)))
-      (when buyer-email
-	(setf data (cons (cons "BuyerEmail" buyer-email)
-			 data)))
-      (when payment-method-list
-	(setf data (append (mapcar (increment-list-pairs "PaymentMethodList"
-							 "PaymentMethod")
-				   payment-method-list)
-			   data)))
-      (when fulfillment-channel-list
-	(setf data (append (mapcar (increment-list-pairs
-				    "FulfillmentChannelList"
-				    "FulfillmentChannel")
-				   fulfillment-channel-list)
-			   data)))
-      (setf data (append (mapcar (increment-list-pairs
-				  "MarketplaceId"
-				  "Id")
-				 marketplace-id-list)
-			 data))
-      (when order-status-list
-	(setf data (append (mapcar (increment-list-pairs
-				    "OrderStatusList"
-				    "OrderStatus")
-				   order-status-list)
-			   data)))
-      (when last-updated-before
-	(setf data (cons (cons "LastUpdatedBefore" last-updated-before)
-			 data)))
-      (when last-updated-after
-	(setf data (cons (cons "LastUpdatedAfter" last-updated-after)
-			 data)))
-      (when created-before
-	(setf data (cons (cons "CreatedBefore" created-before)
-			 data)))
-      (when created-after
-	(setf data (cons (cons "CreatedAfter" created-after)
-			 data)))
+  (when (not (or (and (null last-updated-after)
+		      (null created-after))
+		 (and last-updated-after created-after)))
+    (labels ((kvp (k v) (when v (list (cons k v))))
+	     (lst (n i l) (when l (mapcar (increment-list-pairs n i) l))))
       (mws-request :orders store "ListOrders"
-		   :data data))))
+		   :data
+		   (append
+		    (kvp "CreatedAfter" created-after)
+		    (kvp "CreatedBefore" created-before)
+		    (kvp "LastUpdatedAfter" last-updated-after)
+		    (kvp "LastUpdatedBefore" last-updated-before)
+		    (lst "OrderStatusList" "OrderStatus" order-status-list)
+		    (lst "MarketplaceId" "Id" marketplace-id-list)
+		    (lst "FulfillmentChannelList" "FulfillmentChannel"
+			 fulfillment-channel-list)
+		    (lst "PaymentMethodList" "PaymentMethod"
+			 payment-method-list)
+		    (kvp "BuyerEmail" buyer-email)
+		    (kvp "SellerOrderId" seller-order-id)
+		    (kvp "MaxResultsPerPage" max-results-per-page)
+		    (lst "TFMShipmentSTatusList" "TFMShipmentStatus"
+			 tfm-shipment-status-list))))))
 
 
 (defun list-orders-by-next-token (store next-token)
@@ -586,7 +555,7 @@
 
 
 (defun list-order-items (store amazon-order-id)
-  "UNTESTED - Make a ListOrderItems request to the Orders API"
+  "Make a ListOrderItems request to the Orders API"
   (mws-request :orders store "ListOrderItems"
 	       :data (list (cons "AmazonOrderId" amazon-order-id))))
 
