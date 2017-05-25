@@ -529,12 +529,11 @@
 		    (kvp "CreatedBefore" created-before)
 		    (kvp "LastUpdatedAfter" last-updated-after)
 		    (kvp "LastUpdatedBefore" last-updated-before)
-		    (lst "OrderStatusList" "OrderStatus" order-status-list)
+		    (lst "OrderStatus" "Status" order-status-list)
 		    (lst "MarketplaceId" "Id" marketplace-id-list)
-		    (lst "FulfillmentChannelList" "FulfillmentChannel"
+		    (lst "FulfillmentChannel" "Channel"
 			 fulfillment-channel-list)
-		    (lst "PaymentMethodList" "PaymentMethod"
-			 payment-method-list)
+		    (lst "PaymentMethod" "Method" payment-method-list)
 		    (kvp "BuyerEmail" buyer-email)
 		    (kvp "SellerOrderId" seller-order-id)
 		    (kvp "MaxResultsPerPage" max-results-per-page)
