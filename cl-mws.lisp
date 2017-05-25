@@ -509,7 +509,7 @@
 		      last-updated-after
 		      last-updated-before
 		      order-status-list
-		      (marketplace-id-list (list (get-marketplace-id)))
+		      marketplace-id-list 
 		      fulfillment-channel-list
 		      payment-method-list
 		      buyer-email
@@ -517,6 +517,8 @@
 		      max-results-per-page
 		      tfm-shipment-status-list)
   "Make a ListOrders request to the Orders API"
+  (when (null marketplace-id-list)
+    (setf marketplace-id-list (list (get-marketplace-id))))
   (when (not (or (and (null last-updated-after)
 		      (null created-after))
 		 (and last-updated-after created-after)))
