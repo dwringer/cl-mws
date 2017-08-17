@@ -561,7 +561,7 @@
 	       :data (list (cons "AmazonOrderId" amazon-order-id))))
 
 
-(defun list-order-items-by-next-token (store amazon-order-id)
+(defun list-order-items-by-next-token (store next-token)
   "UNTESTED - Make a ListOrderItemsByNextToken request to the Orders API"
   (mws-request :orders store "ListOrderItemsByNextToken"
 	       :data (list (cons "NextToken" next-token))))
